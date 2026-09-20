@@ -214,12 +214,12 @@ RUN sed -i /net\.ipv4\.conf\.all\.src_valid_mark/d `which wg-quick`
 
 VOLUME /config /downloads
 
-ADD openvpn/ /etc/openvpn/
+ADD vpn/ /etc/vpn/
 ADD qbittorrent/ /etc/qbittorrent/
 
-RUN chmod +x /etc/qbittorrent/*.sh /etc/qbittorrent/*.init /etc/openvpn/*.sh
+RUN chmod +x /etc/qbittorrent/*.sh /etc/qbittorrent/*.init /etc/vpn/*.sh
 
 EXPOSE 8080
 EXPOSE 8999
 EXPOSE 8999/udp
-CMD ["/bin/bash", "/etc/openvpn/start.sh"]
+CMD ["/bin/bash", "/etc/vpn/start.sh"]

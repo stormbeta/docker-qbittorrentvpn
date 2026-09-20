@@ -265,7 +265,7 @@ if [[ $VPN_ENABLED == "1" || $VPN_ENABLED == "true" || $VPN_ENABLED == "yes" ]];
 		echo "[INFO] Starting OpenVPN..." | ts '%Y-%m-%d %H:%M:%.S'
 		cd /config/openvpn
 		exec openvpn --pull-filter ignore route-ipv6 --pull-filter ignore ifconfig-ipv6 --config "${VPN_CONFIG}" &
-		#exec /bin/bash /etc/openvpn/openvpn.init start &
+		#exec /bin/bash /etc/vpn/openvpn.init start &
 	else
 		echo "[INFO] Starting WireGuard..." | ts '%Y-%m-%d %H:%M:%.S'
 		cd /config/wireguard
@@ -274,7 +274,7 @@ if [[ $VPN_ENABLED == "1" || $VPN_ENABLED == "true" || $VPN_ENABLED == "yes" ]];
 			sleep 0.5 # Just to give WireGuard a bit to go down
 		fi
 		wg-quick up "${VPN_CONFIG}"
-		#exec /bin/bash /etc/openvpn/openvpn.init start &
+		#exec /bin/bash /etc/vpn/openvpn.init start &
 	fi
 	exec /bin/bash /etc/qbittorrent/iptables.sh
 else
