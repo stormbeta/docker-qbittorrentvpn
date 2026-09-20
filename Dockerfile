@@ -1,5 +1,5 @@
 # qBittorrent, OpenVPN and WireGuard, qbittorrentvpn
-FROM debian:bullseye-slim
+FROM debian:trixie-slim
 
 WORKDIR /opt
 
