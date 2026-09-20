@@ -4,15 +4,17 @@
 
 Docker container which runs the latest [qBittorrent](https://github.com/qbittorrent/qBittorrent)-nox client while connecting to WireGuard or OpenVPN with iptables killswitch to prevent IP leakage when the tunnel goes down.
 
+**NOTE**: Forked from DyonR/docker-qbittorrentvpn, as it was archived and quite outdated
+
 [preview]: https://raw.githubusercontent.com/DyonR/docker-templates/master/Screenshots/qbittorrentvpn/qbittorrentvpn-webui.png "qBittorrent WebUI"
 ![alt text][preview]
 
 # Docker Features
-* Base: Debian bullseye-slim
+* Base: Debian trixie-slim
 * [qBittorrent](https://github.com/qbittorrent/qBittorrent) compiled from source
 * [libtorrent](https://github.com/arvidn/libtorrent) compiled from source
-* Compiled with the latest version of [Boost](https://www.boost.org/)
-* Compiled with the latest versions of [CMake](https://cmake.org/)
+* Multi-stage build: [Boost](https://www.boost.org/), [CMake](https://cmake.org/), [Ninja](https://ninja-build.org/) and Qt6 come from Debian, so no toolchain is shipped in the final image
+* qBittorrent and libtorrent versions pinned via the `QBITTORRENT_VERSION` and `LIBTORRENT_VERSION` build args
 * Selectively enable or disable WireGuard or OpenVPN support
 * IP tables killswitch to prevent IP leaking when VPN connection fails
 * Configurable UID and GID for config files and /downloads for qBittorrent
@@ -20,7 +22,7 @@ Docker container which runs the latest [qBittorrent](https://github.com/qbittorr
 * BitTorrent port 8999 exposed by default
 
 ## Run container from Docker registry
-The container is available from the Docker registry and this is the simplest way to get it  
+The container is available from the Docker registry and this is the simplest way to get it
 To run the container use this command, with additional parameters, please refer to the Variables, Volumes, and Ports section:
 
 ```
@@ -46,6 +48,20 @@ $ docker run  -d \
 | `dyonr/qbittorrentvpn:alpha` | The latest alpha version of qBittorrent with libtorrent 2_0, incase you feel like testing new features |
 | `dyonr/qbittorrentvpn:dev` | This branch is used for testing new Docker features or improvements before merging it to the main branch |
 | `dyonr/qbittorrentvpn:v4_2_x` | (Legacy) qBittorrent version 4.2.x with libtorrent 1_x_x |
+
+## Build Arguments
+qBittorrent and libtorrent are compiled from source at pinned versions. Override them to build a different release:
+
+| Build argument | Default | Description |
+|----------|----------|----------|
+| `QBITTORRENT_VERSION` | `release-5.2.3` | A [qBittorrent tag](https://github.com/qbittorrent/qBittorrent/tags) |
+| `LIBTORRENT_VERSION` | `v2.0.14` | A [libtorrent release tag](https://github.com/arvidn/libtorrent/releases) that ships a `libtorrent-rasterbar-*.tar.gz` asset |
+
+```
+$ docker build --build-arg QBITTORRENT_VERSION=release-5.2.2 \
+               --build-arg LIBTORRENT_VERSION=v1.2.20 \
+               -t qbittorrentvpn .
+```
 
 # Variables, Volumes, and Ports
 ## Environment Variables
@@ -93,16 +109,16 @@ Access https://IPADDRESS:PORT from a browser on the same network. (for example: 
 |`username`| `admin` |
 |`password`| `adminadmin` |
 
-# How to use WireGuard 
+# How to use WireGuard
 The container will fail to boot if `VPN_ENABLED` is set and there is no valid .conf file present in the /config/wireguard directory. Drop a .conf file from your VPN provider into /config/wireguard and start the container again. The file must have the name `wg0.conf`, or it will fail to start.
 
 ## WireGuard IPv6 issues
-If you use WireGuard and also have IPv6 enabled, it is necessary to add the IPv6 range to the `LAN_NETWORK` environment variable.  
-Additionally the parameter `--sysctl net.ipv6.conf.all.disable_ipv6=0` also must be added to the `docker run` command, or to the "Extra Parameters" in Unraid.  
-The full Unraid `Extra Parameters` would be: `--restart unless-stopped --sysctl net.ipv6.conf.all.disable_ipv6=0"`  
+If you use WireGuard and also have IPv6 enabled, it is necessary to add the IPv6 range to the `LAN_NETWORK` environment variable.
+Additionally the parameter `--sysctl net.ipv6.conf.all.disable_ipv6=0` also must be added to the `docker run` command, or to the "Extra Parameters" in Unraid.
+The full Unraid `Extra Parameters` would be: `--restart unless-stopped --sysctl net.ipv6.conf.all.disable_ipv6=0"`
 If you do not do this, the container will keep on stopping with the error `RTNETLINK answers permission denied`.
 Since I do not have IPv6, I am did not test.
-Thanks to [mchangrh](https://github.com/mchangrh) / [Issue #49](https://github.com/DyonR/docker-qbittorrentvpn/issues/49)  
+Thanks to [mchangrh](https://github.com/mchangrh) / [Issue #49](https://github.com/DyonR/docker-qbittorrentvpn/issues/49)
 
 # How to use OpenVPN
 The container will fail to boot if `VPN_ENABLED` is set and there is no valid .ovpn file present in the /config/openvpn directory. Drop a .ovpn file from your VPN provider into /config/openvpn (if necessary with additional files like certificates) and start the container again. You may need to edit the ovpn configuration file to load your VPN credentials from a file by setting `auth-user-pass`.
@@ -126,11 +142,11 @@ id <username>
 ```
 
 # Issues
-If you are having issues with this container please submit an issue on GitHub.  
-Please provide logs, Docker version and other information that can simplify reproducing the issue.  
+If you are having issues with this container please submit an issue on GitHub.
+Please provide logs, Docker version and other information that can simplify reproducing the issue.
 If possible, always use the most up to date version of Docker, you operating system, kernel and the container itself. Support is always a best-effort basis.
 
 ### Credits:
-[MarkusMcNugen/docker-qBittorrentvpn](https://github.com/MarkusMcNugen/docker-qBittorrentvpn)  
-[DyonR/jackettvpn](https://github.com/DyonR/jackettvpn)  
+[MarkusMcNugen/docker-qBittorrentvpn](https://github.com/MarkusMcNugen/docker-qBittorrentvpn)
+[DyonR/jackettvpn](https://github.com/DyonR/jackettvpn)
 This projects originates from MarkusMcNugen/docker-qBittorrentvpn, but forking was not possible since DyonR/jackettvpn uses the fork already.
