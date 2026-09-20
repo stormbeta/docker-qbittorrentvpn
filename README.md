@@ -16,10 +16,32 @@ Docker container which runs the latest [qBittorrent](https://github.com/qbittorr
 * Multi-stage build: [Boost](https://www.boost.org/), [CMake](https://cmake.org/), [Ninja](https://ninja-build.org/) and Qt6 come from Debian, so no toolchain is shipped in the final image
 * qBittorrent and libtorrent versions pinned via the `QBITTORRENT_VERSION` and `LIBTORRENT_VERSION` build args
 * Selectively enable or disable WireGuard or OpenVPN support
-* IP tables killswitch to prevent IP leaking when VPN connection fails
+* nftables killswitch to prevent IP leaking when VPN connection fails, applied as a single atomic ruleset
 * Configurable UID and GID for config files and /downloads for qBittorrent
 * Created with [Unraid](https://unraid.net/) in mind
 * BitTorrent port 8999 exposed by default
+
+# Rootless Requirements
+
+Running rootless (`NET_ADMIN` but no `SYS_MODULE`) means the container cannot
+autoload kernel modules. `wg-quick` builds its killswitch with
+`iptables-restore`, so these must already be loaded on the host or the tunnel is
+torn down right after it comes up:
+
+```
+sudo tee /etc/modules-load.d/qbittorrentvpn.conf <<'EOF'
+wireguard
+nf_conntrack
+nft_compat
+ip_tables
+ip6_tables
+xt_addrtype
+xt_comment
+xt_mark
+xt_connmark
+EOF
+sudo systemctl restart systemd-modules-load.service
+```
 
 ## Run container from Docker registry
 The container is available from the Docker registry and this is the simplest way to get it
@@ -72,7 +94,6 @@ $ docker build --build-arg QBITTORRENT_VERSION=release-5.2.2 \
 |`VPN_USERNAME`| No | If username and password provided, configures ovpn file automatically |`VPN_USERNAME=ad8f64c02a2de`||
 |`VPN_PASSWORD`| No | If username and password provided, configures ovpn file automatically |`VPN_PASSWORD=ac98df79ed7fb`||
 |`LAN_NETWORK`| Yes (atleast one) | Comma delimited local Network's with CIDR notation |`LAN_NETWORK=192.168.0.0/24,10.10.0.0/24`||
-|`LEGACY_IPTABLES`| No | Use `iptables (legacy)` instead of `iptables (nf_tables)` |`LEGACY_IPTABLES=yes`||
 |`ENABLE_SSL`| No | Let the container handle SSL (yes/no)? |`ENABLE_SSL=yes`|`yes`|
 |`NAME_SERVERS`| No | Comma delimited name servers |`NAME_SERVERS=1.1.1.1,1.0.0.1`|`1.1.1.1,1.0.0.1`|
 |`PUID`| No | UID applied to /config files and /downloads |`PUID=99`|`99`|

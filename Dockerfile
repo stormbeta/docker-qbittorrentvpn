@@ -86,9 +86,9 @@ RUN apt update \
     ca-certificates \
     dos2unix \
     inetutils-ping \
-    ipcalc \
     iproute2 \
     iptables \
+    jq \
     kmod \
     libqt6core6t64 \
     libqt6network6 \
@@ -97,7 +97,7 @@ RUN apt update \
     libqt6xml6 \
     libssl3t64 \
     moreutils \
-    net-tools \
+    nftables \
     openresolv \
     openssl \
     openvpn \

@@ -3,7 +3,7 @@
 set -e
 
 # check for presence of network interface docker0
-check_network=$(ifconfig | grep docker0 || true)
+check_network=$(ip -j link show dev docker0 2> /dev/null || true)
 
 # if network interface docker0 is present then we are running in host mode and thus must exit
 if [[ ! -z "${check_network}" ]]; then
@@ -20,17 +20,6 @@ else
 	echo "[WARNING] VPN_ENABLED not defined,(via -e VPN_ENABLED), defaulting to 'yes'" | ts '%Y-%m-%d %H:%M:%.S'
 	export VPN_ENABLED="yes"
 fi
-
-export LEGACY_IPTABLES=$(echo "${LEGACY_IPTABLES,,}")
-echo "[INFO] LEGACY_IPTABLES is set to '${LEGACY_IPTABLES}'" | ts '%Y-%m-%d %H:%M:%.S'
-if [[ $LEGACY_IPTABLES == "1" || $LEGACY_IPTABLES == "true" || $LEGACY_IPTABLES == "yes" ]]; then
-	echo "[INFO] Setting iptables to iptables (legacy)" | ts '%Y-%m-%d %H:%M:%.S'
-	update-alternatives --set iptables /usr/sbin/iptables-legacy
-else
-	echo "[INFO] Not making any changes to iptables version" | ts '%Y-%m-%d %H:%M:%.S'
-fi
-iptables_version=$(iptables -V)
-echo "[INFO] The container is currently running ${iptables_version}."  | ts '%Y-%m-%d %H:%M:%.S'
 
 if [[ $VPN_ENABLED == "1" || $VPN_ENABLED == "true" || $VPN_ENABLED == "yes" ]]; then
 	# Check if VPN_TYPE is set.
@@ -57,6 +46,13 @@ if [[ $VPN_ENABLED == "1" || $VPN_ENABLED == "true" || $VPN_ENABLED == "yes" ]];
 	if (( ${exit_code_chown} != 0 || ${exit_code_chmod} != 0 )); then
 		echo "[WARNING] Unable to chown/chmod /config/${VPN_TYPE}/, assuming SMB mountpoint" | ts '%Y-%m-%d %H:%M:%.S'
 	fi
+
+	# The recursive chmod above leaves the config world readable, and these files
+	# hold private keys - WireGuard warns about this on every start. Re-tighten.
+	set +e
+	find "/config/${VPN_TYPE}" -maxdepth 1 -type f \( -name '*.conf' -o -name '*.ovpn' \) \
+		-exec chmod 600 {} + &> /dev/null
+	set -e
 
 	# Wildcard search for openvpn config files (match on first result)
 	if [[ "${VPN_TYPE}" == "openvpn" ]]; then
@@ -175,7 +171,7 @@ if [[ $VPN_ENABLED == "1" || $VPN_ENABLED == "true" || $VPN_ENABLED == "yes" ]];
 				export VPN_PROTOCOL="udp"
 			fi
 		fi
-		# required for use in iptables
+		# required for use in the firewall ruleset
 		if [[ "${VPN_PROTOCOL}" == "tcp-client" ]]; then
 			export VPN_PROTOCOL="tcp"
 		fi
