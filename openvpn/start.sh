@@ -98,6 +98,7 @@ if [[ $VPN_ENABLED == "1" || $VPN_ENABLED == "true" || $VPN_ENABLED == "yes" ]];
 
 			echo "${VPN_USERNAME}" > /config/openvpn/credentials.conf
 			echo "${VPN_PASSWORD}" >> /config/openvpn/credentials.conf
+			chmod 600 /config/openvpn/credentials.conf
 
 			# Replace line with one that points to credentials.conf
 			auth_cred_exist=$(cat "${VPN_CONFIG}" | grep -m 1 'auth-user-pass')
@@ -243,7 +244,10 @@ for name_server_item in "${name_server_list[@]}"; do
 	name_server_item=$(echo "${name_server_item}" | sed -e 's~^[ \t]*~~;s~[ \t]*$~~')
 
 	echo "[INFO] Adding ${name_server_item} to resolv.conf" | ts '%Y-%m-%d %H:%M:%.S'
-	echo "nameserver ${name_server_item}" >> /etc/resolv.conf
+	if ! echo "nameserver ${name_server_item}" >> /etc/resolv.conf 2>/dev/null; then
+		echo "[WARNING] Unable to write to /etc/resolv.conf (read-only mount), skipping. Set DNS servers via the container runtime instead (e.g. 'DNS=' in a Podman quadlet or '--dns' on 'podman run')." | ts '%Y-%m-%d %H:%M:%.S'
+		break
+	fi
 done
 
 if [[ -z "${PUID}" ]]; then
@@ -265,11 +269,11 @@ if [[ $VPN_ENABLED == "1" || $VPN_ENABLED == "true" || $VPN_ENABLED == "yes" ]];
 	else
 		echo "[INFO] Starting WireGuard..." | ts '%Y-%m-%d %H:%M:%.S'
 		cd /config/wireguard
-		if ip link | grep -q `basename -s .conf $VPN_CONFIG`; then
-			wg-quick down $VPN_CONFIG || echo "WireGuard is down already" | ts '%Y-%m-%d %H:%M:%.S' # Run wg-quick down as an extra safeguard in case WireGuard is still up for some reason
+		if ip link | grep -q "$(basename -s .conf "${VPN_CONFIG}")"; then
+			wg-quick down "${VPN_CONFIG}" || echo "WireGuard is down already" | ts '%Y-%m-%d %H:%M:%.S' # Run wg-quick down as an extra safeguard in case WireGuard is still up for some reason
 			sleep 0.5 # Just to give WireGuard a bit to go down
 		fi
-		wg-quick up $VPN_CONFIG
+		wg-quick up "${VPN_CONFIG}"
 		#exec /bin/bash /etc/openvpn/openvpn.init start &
 	fi
 	exec /bin/bash /etc/qbittorrent/iptables.sh
